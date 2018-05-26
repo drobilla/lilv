@@ -40,8 +40,7 @@ lilv_lib_open(LilvWorld*               world,
 	}
 
 	const char* const lib_uri  = lilv_node_as_uri(uri);
-	char* const       lib_path = (char*)serd_file_uri_parse(
-		(const uint8_t*)lib_uri, NULL);
+	char* const       lib_path = (char*)serd_file_uri_parse(lib_uri, NULL);
 	if (!lib_path) {
 		return NULL;
 	}

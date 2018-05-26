@@ -25,7 +25,6 @@ extern "C" {
 
 #include "lilv/lilv.h"
 #include "serd/serd.h"
-#include "sord/sord.h"
 #include "zix/tree.h"
 
 #include <float.h>
@@ -63,6 +62,12 @@ static inline const char* dlerror(void) { return "Unknown error"; }
 #    include "lv2/dynmanifest/dynmanifest.h"
 #endif
 
+#define LILV_READER_STACK_SIZE 65536
+
+#ifndef PAGE_SIZE
+#define PAGE_SIZE 4096
+#endif
+
 /*
  *
  * Types
@@ -81,8 +86,8 @@ struct LilvPortImpl {
 };
 
 struct LilvSpecImpl {
-	SordNode*            spec;
-	SordNode*            bundle;
+	SerdNode*            spec;
+	SerdNode*            bundle;
 	LilvNodes*           data_uris;
 	struct LilvSpecImpl* next;
 };
@@ -152,8 +157,8 @@ typedef struct {
 } LilvOptions;
 
 struct LilvWorldImpl {
-	SordWorld*         world;
-	SordModel*         model;
+	SerdWorld*         world;
+	SerdModel*         model;
 	SerdReader*        reader;
 	unsigned           n_read_files;
 	LilvPluginClass*   lv2_plugin_class;
@@ -164,44 +169,48 @@ struct LilvWorldImpl {
 	LilvNodes*         loaded_files;
 	ZixTree*           libs;
 	struct {
-		SordNode* dc_replaces;
-		SordNode* dman_DynManifest;
-		SordNode* doap_name;
-		SordNode* lv2_Plugin;
-		SordNode* lv2_Specification;
-		SordNode* lv2_appliesTo;
-		SordNode* lv2_binary;
-		SordNode* lv2_default;
-		SordNode* lv2_designation;
-		SordNode* lv2_extensionData;
-		SordNode* lv2_index;
-		SordNode* lv2_latency;
-		SordNode* lv2_maximum;
-		SordNode* lv2_microVersion;
-		SordNode* lv2_minimum;
-		SordNode* lv2_minorVersion;
-		SordNode* lv2_name;
-		SordNode* lv2_optionalFeature;
-		SordNode* lv2_port;
-		SordNode* lv2_portProperty;
-		SordNode* lv2_reportsLatency;
-		SordNode* lv2_requiredFeature;
-		SordNode* lv2_symbol;
-		SordNode* lv2_prototype;
-		SordNode* owl_Ontology;
-		SordNode* pset_value;
-		SordNode* rdf_a;
-		SordNode* rdf_value;
-		SordNode* rdfs_Class;
-		SordNode* rdfs_label;
-		SordNode* rdfs_seeAlso;
-		SordNode* rdfs_subClassOf;
-		SordNode* xsd_base64Binary;
-		SordNode* xsd_boolean;
-		SordNode* xsd_decimal;
-		SordNode* xsd_double;
-		SordNode* xsd_integer;
-		SordNode* null_uri;
+		SerdNode* dc_replaces;
+		SerdNode* dman_DynManifest;
+		SerdNode* doap_name;
+		SerdNode* lv2_Plugin;
+		SerdNode* lv2_Specification;
+		SerdNode* lv2_appliesTo;
+		SerdNode* lv2_binary;
+		SerdNode* lv2_default;
+		SerdNode* lv2_designation;
+		SerdNode* lv2_extensionData;
+		SerdNode* lv2_index;
+		SerdNode* lv2_latency;
+		SerdNode* lv2_maximum;
+		SerdNode* lv2_microVersion;
+		SerdNode* lv2_minimum;
+		SerdNode* lv2_minorVersion;
+		SerdNode* lv2_name;
+		SerdNode* lv2_optionalFeature;
+		SerdNode* lv2_port;
+		SerdNode* lv2_portProperty;
+		SerdNode* lv2_reportsLatency;
+		SerdNode* lv2_requiredFeature;
+		SerdNode* lv2_symbol;
+		SerdNode* lv2_project;
+		SerdNode* lv2_prototype;
+		SerdNode* owl_Ontology;
+		SerdNode* pset_Preset;
+		SerdNode* pset_value;
+		SerdNode* rdf_a;
+		SerdNode* rdf_value;
+		SerdNode* rdfs_Class;
+		SerdNode* rdfs_label;
+		SerdNode* rdfs_seeAlso;
+		SerdNode* rdfs_subClassOf;
+		SerdNode* state_state;
+		SerdNode* xsd_base64Binary;
+		SerdNode* xsd_boolean;
+		SerdNode* xsd_decimal;
+		SerdNode* xsd_double;
+		SerdNode* xsd_int;
+		SerdNode* xsd_integer;
+		SerdNode* null_uri;
 	} uris;
 	LilvOptions opt;
 };
@@ -215,17 +224,6 @@ typedef enum {
 	LILV_VALUE_BLANK,
 	LILV_VALUE_BLOB
 } LilvNodeType;
-
-struct LilvNodeImpl {
-	LilvWorld*   world;
-	SordNode*    node;
-	LilvNodeType type;
-	union {
-		int   int_val;
-		float float_val;
-		bool  bool_val;
-	} val;
-};
 
 struct LilvScalePointImpl {
 	LilvNode* value;
@@ -252,20 +250,22 @@ typedef struct LilvVersion {
  */
 
 LilvPort* lilv_port_new(LilvWorld*      world,
-                        const SordNode* node,
+                        const SerdNode* node,
                         uint32_t        index,
                         const char*     symbol);
 void      lilv_port_free(const LilvPlugin* plugin, LilvPort* port);
 
-LilvPlugin* lilv_plugin_new(LilvWorld* world,
-                            LilvNode*  uri,
-                            LilvNode*  bundle_uri);
-void        lilv_plugin_clear(LilvPlugin* plugin, LilvNode* bundle_uri);
+LilvPlugin*
+lilv_plugin_new(LilvWorld*      world,
+                const LilvNode* uri,
+                const LilvNode* bundle_uri);
+
+void        lilv_plugin_clear(LilvPlugin* plugin, const LilvNode* bundle_uri);
 void        lilv_plugin_load_if_necessary(const LilvPlugin* plugin);
 void        lilv_plugin_free(LilvPlugin* plugin);
 LilvNode*   lilv_plugin_get_unique(const LilvPlugin* plugin,
-                                   const SordNode*   subject,
-                                   const SordNode*   predicate);
+                                   const SerdNode*   subject,
+                                   const SerdNode*   predicate);
 
 void      lilv_collection_free(LilvCollection* collection);
 unsigned  lilv_collection_size(const LilvCollection* collection);
@@ -274,8 +274,8 @@ void*     lilv_collection_get(const LilvCollection* collection,
                               const LilvIter*       i);
 
 LilvPluginClass* lilv_plugin_class_new(LilvWorld*      world,
-                                       const SordNode* parent_node,
-                                       const SordNode* uri,
+                                       const SerdNode* parent_node,
+                                       const SerdNode* uri,
                                        const char*     label);
 
 void lilv_plugin_class_free(LilvPluginClass* plugin_class);
@@ -298,7 +298,7 @@ LilvUIs*           lilv_uis_new(void);
 LilvNode* lilv_world_get_manifest_uri(LilvWorld*      world,
                                       const LilvNode* bundle_uri);
 
-const uint8_t* lilv_world_blank_node_prefix(LilvWorld* world);
+const char* lilv_world_blank_node_prefix(LilvWorld* world);
 
 SerdStatus lilv_world_load_file(LilvWorld*      world,
                                 SerdReader*     reader,
@@ -306,7 +306,7 @@ SerdStatus lilv_world_load_file(LilvWorld*      world,
 
 SerdStatus
 lilv_world_load_graph(LilvWorld*      world,
-                      SordNode*       graph,
+                      const SerdNode* graph,
                       const LilvNode* uri);
 
 LilvUI* lilv_ui_new(LilvWorld* world,
@@ -315,9 +315,6 @@ LilvUI* lilv_ui_new(LilvWorld* world,
                     LilvNode*  binary_uri);
 
 void lilv_ui_free(LilvUI* ui);
-
-LilvNode* lilv_node_new(LilvWorld* world, LilvNodeType type, const char* str);
-LilvNode* lilv_node_new_from_node(LilvWorld* world, const SordNode* node);
 
 int lilv_header_compare_by_uri(const void* a, const void* b, void* user_data);
 int lilv_lib_compare(const void* a, const void* b, void* user_data);
@@ -344,38 +341,38 @@ lilv_collection_get_by_uri(const ZixTree* seq, const LilvNode* uri);
 LilvScalePoint* lilv_scale_point_new(LilvNode* value, LilvNode* label);
 void            lilv_scale_point_free(LilvScalePoint* point);
 
-SordIter*
-lilv_world_query_internal(LilvWorld*      world,
-                          const SordNode* subject,
-                          const SordNode* predicate,
-                          const SordNode* object);
-
-bool
-lilv_world_ask_internal(LilvWorld*      world,
-                        const SordNode* subject,
-                        const SordNode* predicate,
-                        const SordNode* object);
-
 LilvNodes*
 lilv_world_find_nodes_internal(LilvWorld*      world,
-                               const SordNode* subject,
-                               const SordNode* predicate,
-                               const SordNode* object);
+                               const SerdNode* subject,
+                               const SerdNode* predicate,
+                               const SerdNode* object);
 
-SordModel*
+SerdModel*
 lilv_world_filter_model(LilvWorld*      world,
-                        SordModel*      model,
-                        const SordNode* subject,
-                        const SordNode* predicate,
-                        const SordNode* object,
-                        const SordNode* graph);
+                        SerdModel*      model,
+                        const SerdNode* subject,
+                        const SerdNode* predicate,
+                        const SerdNode* object,
+                        const SerdNode* graph);
 
-#define FOREACH_MATCH(iter) \
-	for (; !sord_iter_end(iter); sord_iter_next(iter))
+#define FOREACH_MATCH(statement_name_, range) \
+	for (const SerdStatement* statement_name_ = NULL; \
+	     !serd_range_empty(range) && (statement_name_ = serd_range_front(range)); \
+	     serd_range_next(range))
 
-LilvNodes* lilv_nodes_from_stream_objects(LilvWorld*    world,
-                                          SordIter*     stream,
-                                          SordQuadIndex field);
+struct PatternIterator {
+	const SerdStatement* statement;
+	SerdRange*           range;
+};
+
+#define FOREACH_PAT(name_, model_, s_, p_, o_, g_) \
+	for (SerdRange* r_ = serd_model_range(model_, s_, p_, o_, g_); \
+	     !serd_range_empty(r_) || (serd_range_free(r_), false); \
+	     serd_range_next(r_)) \
+		for (const SerdStatement* name_ = serd_range_front(r_); name_; name_ = NULL)
+
+LilvNodes*
+lilv_nodes_from_range(LilvWorld* world, SerdRange* range, SerdField field);
 
 char*  lilv_strjoin(const char* first, ...);
 char*  lilv_strdup(const char* str);

@@ -21,7 +21,7 @@
 #include "lv2/event/event.h"
 
 #include "lilv/lilv.h"
-#include "sord/sord.h"
+#include "serd/serd.h"
 #include "zix/tree.h"
 
 #include <assert.h>
@@ -32,14 +32,14 @@
 
 LilvPort*
 lilv_port_new(LilvWorld*      world,
-              const SordNode* node,
+              const SerdNode* node,
               uint32_t        index,
               const char*     symbol)
 {
 	LilvPort* port = (LilvPort*)malloc(sizeof(LilvPort));
-	port->node    = lilv_node_new_from_node(world, node);
+	port->node    = serd_node_copy(node);
 	port->index   = index;
-	port->symbol  = lilv_node_new(world, LILV_VALUE_STRING, symbol);
+	port->symbol  = serd_new_string(symbol);
 	port->classes = lilv_nodes_new();
 	return port;
 }
@@ -74,10 +74,11 @@ lilv_port_has_property(const LilvPlugin* plugin,
                        const LilvPort*   port,
                        const LilvNode*   property)
 {
-	return lilv_world_ask_internal(plugin->world,
-	                               port->node->node,
-	                               plugin->world->uris.lv2_portProperty,
-	                               property->node);
+	return serd_model_ask(plugin->world->model,
+	                      port->node,
+	                      plugin->world->uris.lv2_portProperty,
+	                      property,
+	                      NULL);
 }
 
 LILV_API bool
@@ -85,15 +86,16 @@ lilv_port_supports_event(const LilvPlugin* plugin,
                          const LilvPort*   port,
                          const LilvNode*   event_type)
 {
-	const uint8_t* predicates[] = { (const uint8_t*)LV2_EVENT__supportsEvent,
-	                                (const uint8_t*)LV2_ATOM__supports,
-	                                NULL };
+	const char* predicates[] = { LV2_EVENT__supportsEvent,
+	                             LV2_ATOM__supports,
+	                             NULL };
 
-	for (const uint8_t** pred = predicates; *pred; ++pred) {
-		if (lilv_world_ask_internal(plugin->world,
-		                            port->node->node,
-		                            sord_new_uri(plugin->world->world, *pred),
-		                            event_type->node)) {
+	for (const char** pred = predicates; *pred; ++pred) {
+		if (serd_model_ask(plugin->world->model,
+		                   port->node,
+		                   serd_new_uri(*pred),
+		                   event_type,
+		                   NULL)) {
 			return true;
 		}
 	}
@@ -103,12 +105,10 @@ lilv_port_supports_event(const LilvPlugin* plugin,
 static LilvNodes*
 lilv_port_get_value_by_node(const LilvPlugin* plugin,
                             const LilvPort*   port,
-                            const SordNode*   predicate)
+                            const SerdNode*   predicate)
 {
-	return lilv_world_find_nodes_internal(plugin->world,
-	                                      port->node->node,
-	                                      predicate,
-	                                      NULL);
+	return lilv_world_find_nodes_internal(
+		plugin->world, port->node, predicate, NULL);
 }
 
 LILV_API const LilvNode*
@@ -125,11 +125,11 @@ lilv_port_get_value(const LilvPlugin* plugin,
 {
 	if (!lilv_node_is_uri(predicate)) {
 		LILV_ERRORF("Predicate `%s' is not a URI\n",
-		            sord_node_get_string(predicate->node));
+		            serd_node_get_string(predicate));
 		return NULL;
 	}
 
-	return lilv_port_get_value_by_node(plugin, port, predicate->node);
+	return lilv_port_get_value_by_node(plugin, port, predicate);
 }
 
 LILV_API LilvNode*
@@ -228,19 +228,19 @@ LILV_API LilvScalePoints*
 lilv_port_get_scale_points(const LilvPlugin* plugin,
                            const LilvPort*   port)
 {
-	SordIter* points = lilv_world_query_internal(
-		plugin->world,
-		port->node->node,
-		sord_new_uri(plugin->world->world, (const uint8_t*)LV2_CORE__scalePoint),
-		NULL);
+	SerdRange* points = serd_model_range(plugin->world->model,
+	                                     port->node,
+	                                     serd_new_uri(LV2_CORE__scalePoint),
+	                                     NULL,
+	                                     NULL);
 
 	LilvScalePoints* ret = NULL;
-	if (!sord_iter_end(points)) {
+	if (!serd_range_empty(points)) {
 		ret = lilv_scale_points_new();
 	}
 
-	FOREACH_MATCH(points) {
-		const SordNode* point = sord_iter_get_node(points, SORD_OBJECT);
+	FOREACH_MATCH(s, points) {
+		const SerdNode* point = serd_statement_get_object(s);
 
 		LilvNode* value = lilv_plugin_get_unique(plugin,
 		                                         point,
@@ -255,7 +255,7 @@ lilv_port_get_scale_points(const LilvPlugin* plugin,
 				(ZixTree*)ret, lilv_scale_point_new(value, label), NULL);
 		}
 	}
-	sord_iter_free(points);
+	serd_range_free(points);
 
 	assert(!ret || lilv_nodes_size(ret) > 0);
 	return ret;
@@ -265,9 +265,8 @@ LILV_API LilvNodes*
 lilv_port_get_properties(const LilvPlugin* plugin,
                          const LilvPort*   port)
 {
-	LilvNode* pred = lilv_node_new_from_node(
-		plugin->world, plugin->world->uris.lv2_portProperty);
-	LilvNodes* ret = lilv_port_get_value(plugin, port, pred);
+	LilvNode*  pred = serd_node_copy(plugin->world->uris.lv2_portProperty);
+	LilvNodes* ret  = lilv_port_get_value(plugin, port, pred);
 	lilv_node_free(pred);
 	return ret;
 }

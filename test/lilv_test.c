@@ -87,17 +87,16 @@ init_tests(void)
 	         "%s/test_lv2_path/lilv-test.lv2", test_path);
 	lilv_mkdir_p(test_bundle_path);
 
-	SerdNode s = serd_node_new_file_uri(
-		(const uint8_t*)test_bundle_path, NULL, NULL, true);
+	SerdNode* s = serd_new_file_uri(test_bundle_path, NULL);
 
 	snprintf(test_bundle_uri, sizeof(test_bundle_uri), "%s/",
-	         (const char*)s.buf);
+	         serd_node_get_string(s));
 	snprintf(test_manifest_path, sizeof(test_manifest_path), "%s/manifest.ttl",
 	         test_bundle_path);
 	snprintf(test_content_path, sizeof(test_content_path), "%s/plugin.ttl",
 	         test_bundle_path);
 
-	serd_node_free(&s);
+	serd_node_free(s);
 	lilv_free(test_path);
 
 	delete_bundle();
@@ -1547,7 +1546,7 @@ map_uri(LV2_URID_Map_Handle handle,
 		}
 	}
 
-	assert(serd_uri_string_has_scheme((const uint8_t*)uri));
+	assert(serd_uri_string_has_scheme(uri));
 	uris = (char**)realloc(uris, ++n_uris * sizeof(char*));
 	uris[n_uris - 1] = lilv_strdup(uri);
 	return n_uris;
@@ -1583,14 +1582,12 @@ test_state(void)
 {
 	init_world();
 
-	uint8_t*   abs_bundle = (uint8_t*)lilv_path_absolute(LILV_TEST_BUNDLE);
-	SerdNode   bundle     = serd_node_new_file_uri(abs_bundle, 0, 0, true);
-	LilvNode*  bundle_uri = lilv_new_uri(world, (const char*)bundle.buf);
+	char*      abs_bundle = lilv_path_absolute(LILV_TEST_BUNDLE);
+	SerdNode*  bundle_uri = serd_new_file_uri(abs_bundle, 0);
 	LilvNode*  plugin_uri = lilv_new_uri(world,
 	                                     "http://example.org/lilv-test-plugin");
 	lilv_world_load_bundle(world, bundle_uri);
 	free(abs_bundle);
-	serd_node_free(&bundle);
 
 	const LilvPlugins* plugins = lilv_world_get_all_plugins(world);
 	const LilvPlugin*  plugin  = lilv_plugins_get_by_uri(plugins, plugin_uri);
@@ -1658,6 +1655,8 @@ test_state(void)
 	char* state1_str = lilv_state_to_string(
 		world, &map, &unmap, state, "http://example.org/state1", NULL);
 
+	fprintf(stderr, "%s", state1_str);
+
 	// Restore from string
 	LilvState* from_str = lilv_state_new_from_string(world, &map, state1_str);
 
@@ -1699,7 +1698,7 @@ test_state(void)
 	lilv_state_set_metadata(state, map.map(map.handle, LILV_NS_RDFS "comment"),
 	                        "This is a comment",
 	                        strlen("This is a comment") + 1,
-	                        map.map(map.handle, "http://lv2plug.in/ns/ext/atom#Literal"),
+	                        map.map(map.handle, "http://lv2plug.in/ns/ext/atom#String"),
 	                        LV2_STATE_IS_POD);
 	lilv_state_set_metadata(state, map.map(map.handle, "http://example.org/metablob"),
 	                        "LIVEBEEF",
@@ -1735,13 +1734,13 @@ test_state(void)
 	TEST_ASSERT(!ret);
 
 	// Load default bundle into world and load state from it
-	uint8_t*  state6_path       = (uint8_t*)lilv_path_absolute("state/state6.lv2/");
-	SerdNode  state6_uri        = serd_node_new_file_uri(state6_path, 0, 0, true);
-	LilvNode* test_state_bundle = lilv_new_uri(world, (const char*)state6_uri.buf);
+	char*     state6_path       = lilv_path_absolute("state/state6.lv2/");
+	SerdNode* state6_uri        = serd_new_file_uri(state6_path, 0);
+	LilvNode* test_state_bundle = serd_node_copy(state6_uri);
 	LilvNode* test_state_node   = lilv_new_uri(world, state_uri);
 	lilv_world_load_bundle(world, test_state_bundle);
 	lilv_world_load_resource(world, test_state_node);
-	serd_node_free(&state6_uri);
+	serd_node_free(state6_uri);
 	lilv_free(state6_path);
 
 	LilvState* state6 = lilv_state_new_from_world(world, &map, test_state_node);

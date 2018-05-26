@@ -61,22 +61,15 @@ CreateSymbolicLink(LPCTSTR linkpath, LPCTSTR targetpath, DWORD flags)
 #    include <sys/file.h>
 #endif
 
-#include <sys/stat.h>
-#include <sys/types.h>
-
 #include <ctype.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#ifndef PAGE_SIZE
-#    define PAGE_SIZE 4096
-#endif
+#include <sys/stat.h>
+#include <time.h>
 
 void
 lilv_free(void* ptr)
@@ -131,16 +124,41 @@ lilv_strdup(const char* str)
 	return copy;
 }
 
+/** Return true iff `path` looks like a Windows path with a drive letter. */
+static inline bool
+is_windows_path(const char* path)
+{
+	return isalpha(path[0]) && (path[1] == ':' || path[1] == '|')
+		&& (path[2] == '/' || path[2] == '\\');
+}
+
 const char*
 lilv_uri_to_path(const char* uri)
 {
-	return (const char*)serd_uri_to_path((const uint8_t*)uri);
+	const char* path = uri;
+	if (!is_windows_path(uri) && serd_uri_string_has_scheme(uri)) {
+		if (strncmp(uri, "file:", 5)) {
+			fprintf(stderr, "Non-file URI `%s'\n", uri);
+			return NULL;
+		} else if (!strncmp(uri, "file://localhost/", 17)) {
+			path = uri + 16;
+		} else if (!strncmp(uri, "file://", 7)) {
+			path = uri + 7;
+		} else {
+			fprintf(stderr, "Invalid file URI `%s'\n", uri);
+			return NULL;
+		}
+		if (is_windows_path(path + 1)) {
+			++path;  // Special case for terrible Windows file URIs
+		}
+	}
+	return path;
 }
 
 char*
 lilv_file_uri_parse(const char* uri, char** hostname)
 {
-	return (char*)serd_file_uri_parse((const uint8_t*)uri, (uint8_t**)hostname);
+	return serd_file_uri_parse(uri, hostname);
 }
 
 /** Return the current LANG converted to Turtle (i.e. RFC3066) style.
@@ -344,13 +362,6 @@ lilv_copy_file(const char* src, const char* dst)
 	fclose(out);
 
 	return st;
-}
-
-static inline bool
-is_windows_path(const char* path)
-{
-	return (isalpha(path[0]) && (path[1] == ':' || path[1] == '|') &&
-	        (path[2] == '/' || path[2] == '\\'));
 }
 
 bool

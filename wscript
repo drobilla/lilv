@@ -12,8 +12,8 @@ from waflib.extras import autowaf
 # major increment <=> incompatible changes
 # minor increment <=> compatible changes (additions)
 # micro increment <=> no interface changes
-LILV_VERSION       = '0.24.7'
-LILV_MAJOR_VERSION = '0'
+LILV_VERSION       = '1.0.0'
+LILV_MAJOR_VERSION = '1'
 
 # Mandatory waf variables
 APPNAME = 'lilv'        # Package name for waf dist
@@ -89,9 +89,8 @@ def configure(conf):
         conf.fatal('Neither a shared nor a static build requested')
 
     conf.check_pkg('lv2 >= 1.17.0', uselib_store='LV2')
-    conf.check_pkg('serd-0 >= 0.30.0', uselib_store='SERD')
-    conf.check_pkg('sord-0 >= 0.14.0', uselib_store='SORD')
-    conf.check_pkg('sratom-0 >= 0.4.0', uselib_store='SRATOM')
+    conf.check_pkg('serd-1 >= 1.0.0', uselib_store='SERD')
+    conf.check_pkg('sratom-1 >= 1.0.0', uselib_store='SRATOM')
     conf.check_pkg('sndfile >= 1.0.0', uselib_store='SNDFILE', mandatory=False)
 
     defines = ['_POSIX_C_SOURCE=200809L', '_BSD_SOURCE', '_DEFAULT_SOURCE']
@@ -184,7 +183,7 @@ def build_util(bld, name, defines, libs=''):
               source       = name + '.c',
               includes     = ['.', './src', './utils'],
               use          = 'liblilv',
-              uselib       = 'SERD SORD SRATOM LV2 ' + libs,
+              uselib       = 'SERD SRATOM LV2 ' + libs,
               target       = name,
               defines      = defines,
               install_path = '${BINDIR}')
@@ -233,7 +232,7 @@ def build(bld):
     # Pkgconfig file
     autowaf.build_pc(bld, 'LILV', LILV_VERSION, LILV_MAJOR_VERSION, [],
                      {'LILV_MAJOR_VERSION' : LILV_MAJOR_VERSION,
-                      'LILV_PKG_DEPS'      : 'lv2 serd-0 sord-0 sratom-0',
+                      'LILV_PKG_DEPS'      : 'lv2 serd-1 sratom-0',
                       'LILV_PKG_LIBS'      : ' -l'.join([''] + lib)})
 
     # Shared Library
@@ -249,7 +248,7 @@ def build(bld):
                   defines         = ['LILV_SHARED', 'LILV_INTERNAL'],
                   cflags          = libflags,
                   lib             = lib,
-                  uselib          = 'SERD SORD SRATOM LV2')
+                  uselib          = 'SERD SRATOM LV2')
 
     # Static library
     if bld.env.BUILD_STATIC:
@@ -262,7 +261,7 @@ def build(bld):
                   vnum            = LILV_VERSION,
                   install_path    = '${LIBDIR}',
                   defines         = defines + ['LILV_INTERNAL'],
-                  uselib          = 'SERD SORD SRATOM LV2')
+                  uselib          = 'SERD SRATOM LV2')
 
     # Python bindings
     if bld.env.LILV_PYTHON:
@@ -321,7 +320,7 @@ def build(bld):
                       cflags       = test_cflags,
                       linkflags    = test_linkflags,
                       lib          = test_libs,
-                      uselib       = 'SERD SORD SRATOM LV2')
+                      uselib       = 'SERD SRATOM LV2')
 
         # Test plugin data files
         for p in ['test'] + test_plugins:
@@ -344,7 +343,7 @@ def build(bld):
                   cflags       = test_cflags,
                   linkflags    = test_linkflags,
                   lib          = test_libs,
-                  uselib       = 'SERD SORD SRATOM LV2')
+                  uselib       = 'SERD SRATOM LV2')
 
         # Unit test program
         testdir = bld.path.get_bld().make_node('test').abspath()
@@ -356,7 +355,7 @@ def build(bld):
                   includes     = ['.', './src'],
                   use          = 'liblilv_profiled',
                   lib          = test_libs,
-                  uselib       = 'SERD SORD SRATOM LV2',
+                  uselib       = 'SERD SRATOM LV2',
                   target       = 'test/lilv_test',
                   install_path = None,
                   defines      = (defines + ['LILV_TEST_BUNDLE=\"%s/\"' % bpath] +
@@ -371,7 +370,7 @@ def build(bld):
                       includes     = ['.', './src'],
                       use          = 'liblilv_profiled',
                       lib          = test_libs,
-                      uselib       = 'SERD SORD SRATOM LV2',
+                      uselib       = 'SERD SRATOM LV2',
                       target       = 'test/lilv_cxx_test',
                       install_path = None,
                       cxxflags     = test_cflags,

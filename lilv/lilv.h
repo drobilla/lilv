@@ -23,6 +23,7 @@
 
 #include "lv2/core/lv2.h"
 #include "lv2/urid/urid.h"
+#include "serd/serd.h"
 
 #include <stdarg.h>
 #include <stdbool.h>
@@ -71,7 +72,7 @@ typedef struct LilvPluginClassImpl LilvPluginClass;  /**< Plugin Class. */
 typedef struct LilvPortImpl        LilvPort;         /**< Port. */
 typedef struct LilvScalePointImpl  LilvScalePoint;   /**< Scale Point. */
 typedef struct LilvUIImpl          LilvUI;           /**< Plugin UI. */
-typedef struct LilvNodeImpl        LilvNode;         /**< Typed Value. */
+typedef SerdNode                   LilvNode;         /**< Typed Value. */
 typedef struct LilvWorldImpl       LilvWorld;        /**< Lilv World. */
 typedef struct LilvInstanceImpl    LilvInstance;     /**< Plugin instance. */
 typedef struct LilvStateImpl       LilvState;        /**< Plugin state. */

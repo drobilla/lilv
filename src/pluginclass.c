@@ -17,7 +17,7 @@
 #include "lilv_internal.h"
 
 #include "lilv/lilv.h"
-#include "sord/sord.h"
+#include "serd/serd.h"
 #include "zix/tree.h"
 
 #include <stdbool.h>
@@ -25,16 +25,16 @@
 
 LilvPluginClass*
 lilv_plugin_class_new(LilvWorld*      world,
-                      const SordNode* parent_node,
-                      const SordNode* uri,
+                      const SerdNode* parent_node,
+                      const SerdNode* uri,
                       const char*     label)
 {
 	LilvPluginClass* pc = (LilvPluginClass*)malloc(sizeof(LilvPluginClass));
 	pc->world      = world;
-	pc->uri        = lilv_node_new_from_node(world, uri);
-	pc->label      = lilv_node_new(world, LILV_VALUE_STRING, label);
+	pc->uri        = serd_node_copy(uri);
+	pc->label      = serd_new_string(label);
 	pc->parent_uri = (parent_node
-	                  ? lilv_node_new_from_node(world, parent_node)
+	                  ? serd_node_copy(parent_node)
 	                  : NULL);
 	return pc;
 }

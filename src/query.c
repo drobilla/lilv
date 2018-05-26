@@ -17,7 +17,7 @@
 #include "lilv_internal.h"
 
 #include "lilv/lilv.h"
-#include "sord/sord.h"
+#include "serd/serd.h"
 #include "zix/tree.h"
 
 #include <stdlib.h>
@@ -49,22 +49,20 @@ lilv_lang_matches(const char* a, const char* b)
 }
 
 static LilvNodes*
-lilv_nodes_from_stream_objects_i18n(LilvWorld*    world,
-                                    SordIter*     stream,
-                                    SordQuadIndex field)
+lilv_nodes_from_range_i18n(LilvWorld* world, SerdRange* range, SerdField field)
 {
 	LilvNodes*      values  = lilv_nodes_new();
-	const SordNode* nolang  = NULL;  // Untranslated value
-	const SordNode* partial = NULL;  // Partial language match
+	const SerdNode* nolang  = NULL;  // Untranslated value
+	const SerdNode* partial = NULL;  // Partial language match
 	char*           syslang = lilv_get_lang();
-	FOREACH_MATCH(stream) {
-		const SordNode* value = sord_iter_get_node(stream, field);
-		if (sord_node_get_type(value) == SORD_LITERAL) {
-			const char*   lang = sord_node_get_language(value);
-			LilvLangMatch lm   = LILV_LANG_MATCH_NONE;
+	FOREACH_MATCH(s, range) {
+		const SerdNode* value = serd_statement_get_node(s, field);
+		if (serd_node_get_type(value) == SERD_LITERAL) {
+			const SerdNode* lang = serd_node_get_language(value);
+			LilvLangMatch   lm   = LILV_LANG_MATCH_NONE;
 			if (lang) {
 				lm = (syslang)
-					? lilv_lang_matches(lang, syslang)
+					? lilv_lang_matches(serd_node_get_string(lang), syslang)
 					: LILV_LANG_MATCH_PARTIAL;
 			} else {
 				nolang = value;
@@ -75,27 +73,23 @@ lilv_nodes_from_stream_objects_i18n(LilvWorld*    world,
 
 			if (lm == LILV_LANG_MATCH_EXACT) {
 				// Exact language match, add to results
-				zix_tree_insert((ZixTree*)values,
-				                lilv_node_new_from_node(world, value),
-				                NULL);
+				zix_tree_insert((ZixTree*)values, serd_node_copy(value), NULL);
 			} else if (lm == LILV_LANG_MATCH_PARTIAL) {
 				// Partial language match, save in case we find no exact
 				partial = value;
 			}
 		} else {
-			zix_tree_insert((ZixTree*)values,
-			                lilv_node_new_from_node(world, value),
-			                NULL);
+			zix_tree_insert((ZixTree*)values, serd_node_copy(value), NULL);
 		}
 	}
-	sord_iter_free(stream);
+	serd_range_free(range);
 	free(syslang);
 
 	if (lilv_nodes_size(values) > 0) {
 		return values;
 	}
 
-	const SordNode* best = nolang;
+	const SerdNode* best = nolang;
 	if (syslang && partial) {
 		// Partial language match for system language
 		best = partial;
@@ -106,8 +100,7 @@ lilv_nodes_from_stream_objects_i18n(LilvWorld*    world,
 	}
 
 	if (best) {
-		zix_tree_insert(
-			(ZixTree*)values, lilv_node_new_from_node(world, best), NULL);
+		zix_tree_insert((ZixTree*)values, serd_node_copy(best), NULL);
 	} else {
 		// No matches whatsoever
 		lilv_nodes_free(values);
@@ -118,25 +111,23 @@ lilv_nodes_from_stream_objects_i18n(LilvWorld*    world,
 }
 
 LilvNodes*
-lilv_nodes_from_stream_objects(LilvWorld*    world,
-                               SordIter*     stream,
-                               SordQuadIndex field)
+lilv_nodes_from_range(LilvWorld* world, SerdRange* range, SerdField field)
 {
-	if (sord_iter_end(stream)) {
-		sord_iter_free(stream);
+	if (serd_range_empty(range)) {
+		serd_range_free(range);
 		return NULL;
 	} else if (world->opt.filter_language) {
-		return lilv_nodes_from_stream_objects_i18n(world, stream, field);
+		return lilv_nodes_from_range_i18n(world, range, field);
 	} else {
 		LilvNodes* values = lilv_nodes_new();
-		FOREACH_MATCH(stream) {
-			const SordNode* value = sord_iter_get_node(stream, field);
-			LilvNode*       node  = lilv_node_new_from_node(world, value);
+		FOREACH_MATCH(s, range) {
+			const SerdNode* value = serd_statement_get_node(s, field);
+			LilvNode*       node  = serd_node_copy(value);
 			if (node) {
 				zix_tree_insert((ZixTree*)values, node, NULL);
 			}
 		}
-		sord_iter_free(stream);
+		serd_range_free(range);
 		return values;
 	}
 }
