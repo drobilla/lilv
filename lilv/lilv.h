@@ -66,16 +66,6 @@ extern "C" {
 #define LILV_NS_RDFS "http://www.w3.org/2000/01/rdf-schema#"
 #define LILV_NS_XSD  "http://www.w3.org/2001/XMLSchema#"
 
-#define LILV_URI_ATOM_PORT    "http://lv2plug.in/ns/ext/atom#AtomPort"
-#define LILV_URI_AUDIO_PORT   "http://lv2plug.in/ns/lv2core#AudioPort"
-#define LILV_URI_CONTROL_PORT "http://lv2plug.in/ns/lv2core#ControlPort"
-#define LILV_URI_CV_PORT      "http://lv2plug.in/ns/lv2core#CVPort"
-#define LILV_URI_EVENT_PORT   "http://lv2plug.in/ns/ext/event#EventPort"
-#define LILV_URI_INPUT_PORT   "http://lv2plug.in/ns/lv2core#InputPort"
-#define LILV_URI_MIDI_EVENT   "http://lv2plug.in/ns/ext/midi#MidiEvent"
-#define LILV_URI_OUTPUT_PORT  "http://lv2plug.in/ns/lv2core#OutputPort"
-#define LILV_URI_PORT         "http://lv2plug.in/ns/lv2core#Port"
-
 typedef struct LilvPluginImpl      LilvPlugin;       /**< LV2 Plugin. */
 typedef struct LilvPluginClassImpl LilvPluginClass;  /**< Plugin Class. */
 typedef struct LilvPortImpl        LilvPort;         /**< Port. */

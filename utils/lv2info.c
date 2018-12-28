@@ -399,8 +399,8 @@ main(int argc, char** argv)
 	}
 
 	applies_to_pred     = lilv_new_uri(world, LV2_CORE__appliesTo);
-	control_class       = lilv_new_uri(world, LILV_URI_CONTROL_PORT);
-	event_class         = lilv_new_uri(world, LILV_URI_EVENT_PORT);
+	control_class       = lilv_new_uri(world, LV2_CORE__ControlPort);
+	event_class         = lilv_new_uri(world, LV2_EVENT__EventPort);
 	group_pred          = lilv_new_uri(world, LV2_PORT_GROUPS__group);
 	label_pred          = lilv_new_uri(world, LILV_NS_RDFS "label");
 	preset_class        = lilv_new_uri(world, LV2_PRESETS__Preset);

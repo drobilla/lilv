@@ -423,8 +423,8 @@ lilv_state_new_from_instance(const LilvPlugin*          plugin,
 
 	// Store port values
 	if (get_value) {
-		LilvNode* lv2_ControlPort = lilv_new_uri(world, LILV_URI_CONTROL_PORT);
-		LilvNode* lv2_InputPort   = lilv_new_uri(world, LILV_URI_INPUT_PORT);
+		LilvNode* lv2_ControlPort = lilv_new_uri(world, LV2_CORE__ControlPort);
+		LilvNode* lv2_InputPort   = lilv_new_uri(world, LV2_CORE__InputPort);
 		for (uint32_t i = 0; i < plugin->num_ports; ++i) {
 			const LilvPort* const port = plugin->ports[i];
 			if (lilv_port_is_a(plugin, port, lv2_ControlPort)
