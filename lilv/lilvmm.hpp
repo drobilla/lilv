@@ -21,26 +21,6 @@
 
 namespace Lilv {
 
-#if defined(__clang__)
-#    pragma clang diagnostic push
-#    pragma clang diagnostic ignored "-Wdeprecated-declarations"
-#elif __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
-#    pragma GCC diagnostic push
-#    pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-
-LILV_DEPRECATED
-static inline const char*
-uri_to_path(const char* uri) {
-	return lilv_uri_to_path(uri);
-}
-
-#if defined(__clang__)
-#    pragma clang diagnostic pop
-#elif __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 6)
-#    pragma GCC diagnostic pop
-#endif
-
 #define LILV_WRAP0(RT, prefix, name) \
 	inline RT name() { return lilv_ ## prefix ## _ ## name (me); }
 
