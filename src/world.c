@@ -29,7 +29,6 @@
 
 #ifdef LILV_DYN_MANIFEST
 #  include "lv2/dynmanifest/dynmanifest.h"
-#  include <dlfcn.h>
 #endif
 
 #include <assert.h>
